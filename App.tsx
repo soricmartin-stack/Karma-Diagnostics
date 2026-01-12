@@ -44,28 +44,37 @@ const App: React.FC = () => {
 
   // Google Identity Initialization
   useEffect(() => {
-    if (state.phase === 'AUTH_CHOICE') {
-      // In a real app, you'd use a real client ID
-      // This is a placeholder for the GIS script flow
-      (window as any).handleGoogleCredential = async (response: any) => {
-        setState(prev => ({ ...prev, loading: true }));
-        try {
-          // Mocking a Google Token decoded payload
-          const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
-          const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
-          let user: UserProfile;
-          if (existing) {
-            user = existing;
-          } else {
-            user = { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
-            await storageService.saveUser(user, 'GOOGLE_AUTH');
+    const google = (window as any).google;
+    if (google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: "SOUL_APP_CLIENT_ID", // Placeholder for actual Client ID
+        callback: async (response: any) => {
+          setState(prev => ({ ...prev, loading: true }));
+          try {
+            // Mocking a Google Token decoded payload for demonstration
+            // In a real app, you would decode the JWT `response.credential`
+            const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
+            const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
+            let user: UserProfile;
+            if (existing) {
+              user = existing;
+            } else {
+              user = { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
+              await storageService.saveUser(user, 'GOOGLE_AUTH');
+            }
+            setAuthType('GOOGLE');
+            setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
+          } catch (e) {
+            setState(prev => ({ ...prev, loading: false, error: "Google Login Failed" }));
           }
-          setAuthType('GOOGLE');
-          setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
-        } catch (e) {
-          setState(prev => ({ ...prev, loading: false, error: "Google Login Failed" }));
-        }
-      };
+        },
+        auto_select: true
+      });
+      
+      // Optionally show One Tap if we are in the auth choice phase
+      if (state.phase === 'AUTH_CHOICE') {
+        google.accounts.id.prompt();
+      }
     }
   }, [state.phase, state.language]);
 
@@ -76,8 +85,19 @@ const App: React.FC = () => {
   const handleAuthChoice = async (method: AuthMethod) => {
     setAuthType(method);
     if (method === 'GOOGLE') {
-      // Trigger Google flow simulation
-      (window as any).handleGoogleCredential({ credential: 'mock_token' });
+      // Trigger Google flow simulation or standard prompt
+      const google = (window as any).google;
+      if (google && google.accounts && google.accounts.id) {
+        google.accounts.id.prompt();
+      } else {
+        // Fallback simulation if GIS is blocked or not loaded
+        setState(prev => ({ ...prev, loading: true }));
+        const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
+        const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
+        let user = existing || { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
+        if (!existing) await storageService.saveUser(user, 'GOOGLE_AUTH');
+        setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
+      }
     } else if (method === 'BIOMETRIC') {
       setState(prev => ({ ...prev, phase: 'BIOMETRIC_SETUP' }));
     } else {
