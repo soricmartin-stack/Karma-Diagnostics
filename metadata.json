@@ -1,6 +1,13 @@
 {
   "name": "Soul Development App",
   "description": "A profound self-reflection application that uses Gemini to analyze life situations through the lens of cause and effect, mindfulness, and ethical clarity.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
   "requestFramePermissions": [
     "microphone"
   ]

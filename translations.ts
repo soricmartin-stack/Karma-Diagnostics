@@ -1,7 +1,6 @@
 
 import { LanguageCode } from './types';
 
-// Use Partial to allow missing translations while we build out support for all languages
 export const translations: Partial<Record<LanguageCode, any>> = {
   en: {
     headerSub: "A quiet space to reflect on your life.",
@@ -62,12 +61,16 @@ export const translations: Partial<Record<LanguageCode, any>> = {
     authChoiceTitle: "How would you like to protect your journey?",
     useBiometrics: "Use FaceID or Fingerprint",
     usePassword: "Use a Password",
-    biometricSub: "Quick and secure access using your device's security.",
+    useGoogle: "Continue with Google",
+    biometricSub: "Quick and secure access using your device.",
     passwordSub: "Traditional access with a unique secret key.",
+    googleSub: "Universal access across all your devices.",
     biometricNotSupported: "Biometrics not supported on this device.",
     registerBiometric: "Register Device",
     setupPasswordTitle: "Sign in to your soul space",
     setupSignUpTitle: "Begin your journey",
+    syncActive: "Universal Sync Active",
+    backBtn: "Back",
     prompts: [
       "What is one thing you're carrying today that you'd like to put down?",
       "What was a moment today where you felt misunderstood?",
@@ -102,7 +105,7 @@ export const translations: Partial<Record<LanguageCode, any>> = {
     gardenStageLeafy: "Rastuće razumijevanje",
     gardenStageFlowering: "Duša u cvatu",
     accessHistory: "Pristupi svojoj povijesti",
-    historyTitle: "podijeljenih razmišljanja",
+    historyTitle: "podijeljenih razmišjanja",
     growthAvg: "Prosjek rasta",
     newSession: "Nova sesija",
     deepPattern: "Otkriven duboki obrazac",
@@ -144,12 +147,16 @@ export const translations: Partial<Record<LanguageCode, any>> = {
     authChoiceTitle: "Kako želite zaštititi svoje putovanje?",
     useBiometrics: "Koristi FaceID ili otisak prsta",
     usePassword: "Koristi lozinku",
+    useGoogle: "Nastavi s Googleom",
     biometricSub: "Brz i siguran pristup pomoću sigurnosti vašeg uređaja.",
     passwordSub: "Tradicionalni pristup s jedinstvenim tajnim ključem.",
+    googleSub: "Univerzalni pristup na svim vašim uređajima.",
     biometricNotSupported: "Biometrija nije podržana na ovom uređaju.",
     registerBiometric: "Registriraj uređaj",
     setupPasswordTitle: "Prijavite se u svoj duhovni prostor",
     setupSignUpTitle: "Započnite svoje putovanje",
+    syncActive: "Univerzalna sinkronizacija aktivna",
+    backBtn: "Nazad",
     prompts: [
       "Što je jedna stvar koju danas nosite, a koju biste željeli odložiti?",
       "Koji je bio trenutak danas kada ste se osjećali neshvaćeno?",

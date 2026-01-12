@@ -33,7 +33,7 @@ export interface StoredResult {
   diagnostic: KarmaDiagnostic;
 }
 
-export type AuthMethod = 'PASSWORD' | 'BIOMETRIC';
+export type AuthMethod = 'PASSWORD' | 'BIOMETRIC' | 'GOOGLE';
 
 export interface UserProfile {
   name: string;
