@@ -57,7 +57,6 @@ const App: React.FC = () => {
         setAuthType('GOOGLE');
       } else {
         // Fallback for Biometric/Password simulation
-        // In this easy UI version, we favor Google for the Universal Sync experience
         user = await firestoreService.getUserProfile('guest@soul.com');
         if (!user) {
           user = { 
@@ -71,6 +70,10 @@ const App: React.FC = () => {
         }
         setAuthType(method);
       }
+
+      // Ensure history is fresh using reflections.getAll pattern
+      const reflections = await firestoreService.reflections.getAll(user!.email);
+      user!.history = reflections;
 
       setState(prev => ({ 
         ...prev, 
@@ -100,19 +103,23 @@ const App: React.FC = () => {
     const fullHistory = [...state.currentHistory, ...batchAnswers];
     setState(prev => ({ ...prev, loading: true, currentHistory: fullHistory }));
     try {
+      // Analyze with Gemini Karma Tool
       const diagnostic = await diagnoseKarma(state.initialSituation, fullHistory, state.language);
-      const now = new Date().toISOString();
-      const newResult: StoredResult = { id: Date.now().toString(), date: now, situation: state.initialSituation, diagnostic };
       
       if (state.user) {
+        // Create new reflection entry using standardized service method
+        const newEntry = await firestoreService.reflections.create({
+          content: state.initialSituation,
+          userId: state.user.email,
+          diagnostic: diagnostic
+        });
+        
+        // Update local state with the newly synced record
         const updatedUser: UserProfile = { 
           ...state.user, 
-          history: [...state.user.history, newResult], 
-          lastReflectionDate: now 
+          history: [...state.user.history, newEntry], 
+          lastReflectionDate: newEntry.date 
         };
-        
-        // Universal Push to Cloud
-        await firestoreService.saveUserProfile(updatedUser);
         
         setState(prev => ({ 
           ...prev, 

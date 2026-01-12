@@ -1,5 +1,5 @@
 
-import { UserProfile, StoredResult } from './types';
+import { UserProfile, StoredResult, KarmaDiagnostic } from './types';
 
 /**
  * Universal Cloud Database Simulation (Firebase Pattern)
@@ -67,5 +67,37 @@ export const firestoreService = {
     await new Promise(r => setTimeout(r, 400));
     const db = getDatabase();
     return db.users[email.toLowerCase()] || null;
+  },
+
+  /**
+   * Universal Reflections Service
+   */
+  reflections: {
+    getAll: async (userId: string): Promise<StoredResult[]> => {
+      // In this app, userId maps to the email identifier
+      const profile = await firestoreService.getUserProfile(userId);
+      return profile?.history || [];
+    },
+
+    create: async (data: { content: string; userId: string; diagnostic: KarmaDiagnostic }): Promise<StoredResult> => {
+      const profile = await firestoreService.getUserProfile(data.userId);
+      if (!profile) throw new Error("User profile not found for synchronization.");
+
+      const newResult: StoredResult = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        situation: data.content,
+        diagnostic: data.diagnostic
+      };
+
+      // Update the local representation
+      profile.history.push(newResult);
+      profile.lastReflectionDate = newResult.date;
+
+      // Sync to cloud
+      await firestoreService.saveUserProfile(profile);
+      
+      return newResult;
+    }
   }
 };
