@@ -7,13 +7,12 @@ import DiagnosticResult from './components/DiagnosticResult';
 import QuestionFlow from './components/QuestionFlow';
 import FullSoulDiagnosticResult from './components/FullSoulDiagnosticResult';
 import LanguageSelector from './components/LanguageSelector';
-import AuthChoice from './components/AuthChoice';
 import { diagnoseKarma, generateQuestionsWithOptions, generateFullSoulDiagnostic } from './services/geminiService';
-import { DiagnosisState, QuestionAnswer, UserProfile, StoredResult, LanguageCode, AuthMethod } from './types';
+import { DiagnosisState, QuestionAnswer, UserProfile, StoredResult, LanguageCode } from './types';
 import { translations } from './translations';
 
 // Universal Sync Integration
-import { firestoreService, authService, formatDate } from './firebase-integration.ts';
+import { firestoreService } from './firebase-integration.ts';
 
 const App: React.FC = () => {
   const [state, setState] = useState<DiagnosisState>({
@@ -29,62 +28,37 @@ const App: React.FC = () => {
     error: null,
   });
 
-  const [authType, setAuthType] = useState<AuthMethod | null>(null);
-  const [showChoiceDashboard, setShowChoiceDashboard] = useState(false);
-
   const t = translations[state.language] || translations['en'];
 
-  useEffect(() => {
-    if (state.phase === 'CHOICE') {
-      const timer = setTimeout(() => setShowChoiceDashboard(true), 2000);
-      return () => clearTimeout(timer);
+  const handleLanguageSelect = async (lang: LanguageCode) => {
+    setState(prev => ({ ...prev, loading: true, language: lang }));
+    
+    // Automatically initialize a Guest User profile since login is removed
+    const guestEmail = 'soul.traveler@local.space';
+    let user = await firestoreService.getUserProfile(guestEmail);
+    
+    if (!user) {
+      user = { 
+        name: "Soul Traveler", 
+        email: guestEmail, 
+        language: lang, 
+        authMethod: 'GOOGLE', // Irrelevant but kept for type compatibility
+        history: [] 
+      };
+      await firestoreService.saveUserProfile(user);
     } else {
-      setShowChoiceDashboard(false);
+      // Sync history
+      const reflections = await firestoreService.reflections.getAll(guestEmail);
+      user.history = reflections;
     }
-  }, [state.phase]);
 
-  const handleLanguageSelect = (lang: LanguageCode) => {
-    setState(prev => ({ ...prev, language: lang, phase: 'AUTH_CHOICE' }));
-  };
-
-  const handleAuthChoice = async (method: AuthMethod) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      let user: UserProfile | null = null;
-      
-      if (method === 'GOOGLE') {
-        user = await authService.signInWithGoogle();
-        setAuthType('GOOGLE');
-      } else {
-        // Fallback for Biometric/Password simulation
-        user = await firestoreService.getUserProfile('guest@soul.com');
-        if (!user) {
-          user = { 
-            name: "Soul Guest", 
-            email: "guest@soul.com", 
-            language: state.language, 
-            authMethod: method, 
-            history: [] 
-          };
-          await firestoreService.saveUserProfile(user);
-        }
-        setAuthType(method);
-      }
-
-      // Ensure history is fresh using reflections.getAll pattern
-      const reflections = await firestoreService.reflections.getAll(user!.email);
-      user!.history = reflections;
-
-      setState(prev => ({ 
-        ...prev, 
-        user, 
-        phase: 'DASHBOARD', 
-        loading: false,
-        language: (user?.language as LanguageCode) || prev.language
-      }));
-    } catch (err) {
-      setState(prev => ({ ...prev, loading: false, error: "Universal Sync Failed. Try again." }));
-    }
+    setState(prev => ({ 
+      ...prev, 
+      user, 
+      phase: 'DASHBOARD', 
+      loading: false,
+      language: lang
+    }));
   };
 
   const handleStartReflection = async (situation: string) => {
@@ -103,18 +77,15 @@ const App: React.FC = () => {
     const fullHistory = [...state.currentHistory, ...batchAnswers];
     setState(prev => ({ ...prev, loading: true, currentHistory: fullHistory }));
     try {
-      // Analyze with Gemini Karma Tool
       const diagnostic = await diagnoseKarma(state.initialSituation, fullHistory, state.language);
       
       if (state.user) {
-        // Create new reflection entry using standardized service method
         const newEntry = await firestoreService.reflections.create({
           content: state.initialSituation,
           userId: state.user.email,
           diagnostic: diagnostic
         });
         
-        // Update local state with the newly synced record
         const updatedUser: UserProfile = { 
           ...state.user, 
           history: [...state.user.history, newEntry], 
@@ -161,7 +132,7 @@ const App: React.FC = () => {
 
   const handleGlobalBack = () => {
     const { phase } = state;
-    if (phase === 'AUTH_CHOICE') setState(prev => ({ ...prev, phase: 'LANGUAGE_SELECT' }));
+    if (phase === 'DASHBOARD') setState(prev => ({ ...prev, phase: 'LANGUAGE_SELECT' }));
     else if (phase === 'CHOICE' || phase === 'RESULT' || phase === 'FULL_RESULT') setState(prev => ({ ...prev, phase: 'DASHBOARD' }));
     else if (phase === 'QUESTIONING') setState(prev => ({ ...prev, phase: 'CHOICE' }));
   };
@@ -169,12 +140,13 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (state.phase) {
       case 'LANGUAGE_SELECT': return <LanguageSelector onSelect={handleLanguageSelect} />;
-      case 'AUTH_CHOICE': return <AuthChoice onSelect={handleAuthChoice} t={t} />;
       case 'DASHBOARD':
         return state.user && (
           <ProgressDashboard 
             t={t} 
             user={state.user} 
+            // Added language prop passing
+            language={state.language}
             onNewSession={() => setState(prev => ({ ...prev, phase: 'CHOICE' }))} 
             onFullDiagnostic={handleRunFullDiagnostic} 
             onViewResult={(item) => setState(prev => ({ ...prev, phase: 'RESULT', result: item.diagnostic, initialSituation: item.situation, currentHistory: [] }))} 
@@ -187,15 +159,10 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-[#4a453e] leading-tight mb-1"> {t.heartGreeting.replace('{name}', state.user?.name || '')} </h2>
              </div>
              <DiagnosticForm t={t} onSubmit={handleStartReflection} loading={state.loading} />
-             {showChoiceDashboard && (
-               <div className="text-center animate-slow-fade mt-4">
-                  <button onClick={() => setState(prev => ({ ...prev, phase: 'DASHBOARD' }))} className="text-[#a8a29e] text-[8px] font-bold uppercase tracking-[0.4em]"> {t.dashboard} </button>
-               </div>
-             )}
           </div>
         );
       case 'QUESTIONING':
-        return <div className="max-w-md mx-auto animate-slow-fade"><QuestionFlow questions={state.currentQuestions} onComplete={handleFinishQuestionsBatch} onCancel={handleGlobalBack} /></div>;
+        return <div className="max-w-md mx-auto animate-slow-fade"><QuestionFlow t={t} questions={state.currentQuestions} onComplete={handleFinishQuestionsBatch} onCancel={handleGlobalBack} /></div>;
       case 'RESULT':
         return state.result && (
           <div className="max-w-3xl mx-auto animate-slow-fade">
@@ -220,7 +187,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showReturnButton = state.phase !== 'LANGUAGE_SELECT' && state.phase !== 'DASHBOARD';
+  const showReturnButton = state.phase !== 'LANGUAGE_SELECT';
 
   return (
     <div className="min-h-screen pb-12 px-4 md:px-12 transition-all duration-1000 overflow-y-auto relative">
@@ -233,7 +200,7 @@ const App: React.FC = () => {
         </button>
       )}
       <div className="max-w-3xl mx-auto flex flex-col min-h-screen">
-        <Header subText={t?.headerSub} />
+        <Header subText={t?.headerSub} title={t?.appTitle} />
         <main className="relative flex-grow pb-8">
           {state.error && <div className="max-w-xs mx-auto mb-4 p-4 glass-panel text-red-600 rounded-2xl text-center text-[10px] font-bold uppercase tracking-widest">{state.error}</div>}
           {renderContent()}

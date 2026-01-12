@@ -46,7 +46,7 @@ const DiagnosticResult: React.FC<DiagnosticResultProps> = ({ result, user, onRef
 
         <div className="flex flex-col items-center py-8 md:py-10 bg-[#faf9f6] rounded-2xl border border-[#e7e5e4] mb-8 md:mb-12 shadow-inner">
           <h3 className="text-[9px] font-bold text-[#a8a29e] uppercase tracking-widest mb-6">{t.growthMap}</h3>
-          <VisualChart scores={result.scores} />
+          <VisualChart scores={result.scores} labels={t.chartLabels} />
           <div className="mt-6 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase border border-[#e7e5e4] bg-white text-[#8b7e6a] shadow-sm">
             {result.overallBalance}
           </div>

@@ -1,18 +1,20 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserProfile, StoredResult } from '../types';
+import { UserProfile, StoredResult, LanguageCode } from '../types';
 import SoulGarden from './SoulGarden';
 import GrandSoulWidget from './GrandSoulWidget';
 
 interface ProgressDashboardProps {
   user: UserProfile;
+  // Added language prop to handle localized time string logic
+  language: LanguageCode;
   onNewSession: () => void;
   onViewResult: (result: StoredResult) => void;
   onFullDiagnostic: () => void;
   t: any;
 }
 
-const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ user, onNewSession, onViewResult, onFullDiagnostic, t }) => {
+const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ user, language, onNewSession, onViewResult, onFullDiagnostic, t }) => {
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
@@ -34,12 +36,14 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ user, onNewSessio
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     
     let timeStr = "";
-    if (diffHours < 1) timeStr = "less than an hour";
-    else if (diffHours < 24) timeStr = `${diffHours} hour${diffHours === 1 ? '' : 's'}`;
-    else timeStr = `${Math.floor(diffHours / 24)} day${Math.floor(diffHours / 24) === 1 ? '' : 's'}`;
+    // Fixed: Replaced non-existent 'state.language' with 'language' prop
+    if (diffHours < 1) timeStr = language === 'en' ? "less than an hour" : "manje od sat vremena";
+    else if (diffHours < 24) timeStr = `${diffHours} ${language === 'en' ? 'hour' : 'sat'}${(diffHours === 1 || language === 'hr') ? '' : 's'}`;
+    else timeStr = `${Math.floor(diffHours / 24)} ${language === 'en' ? 'day' : 'dan'}${Math.floor(diffHours / 24) === 1 ? '' : 's'}`;
     
     return t.lastFoundPeace.replace('{time}', timeStr);
-  }, [user.lastReflectionDate, t.lastFoundPeace]);
+    // Added language to dependency array
+  }, [user.lastReflectionDate, t.lastFoundPeace, language]);
 
   const gardenStage = useMemo(() => {
     const count = user.history.length;
@@ -87,7 +91,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ user, onNewSessio
       <div className={`space-y-6 transition-all duration-1000 ${showHistory ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} px-4 md:px-0`}>
         <div className="flex items-center gap-4">
           <div className="h-px flex-1 bg-[#e7e5e4]"></div>
-          <span className="text-[9px] font-bold text-[#a8a29e] uppercase tracking-[0.3em]">Universal History</span>
+          <span className="text-[9px] font-bold text-[#a8a29e] uppercase tracking-[0.3em]">{t.universalHistory}</span>
           <div className="h-px flex-1 bg-[#e7e5e4]"></div>
         </div>
 
@@ -106,7 +110,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ user, onNewSessio
                 <h4 className="font-medium text-[#4a453e] text-sm line-clamp-2 mb-4 h-10">{item.situation}</h4>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-[8px] font-bold text-[#a8a29e] uppercase tracking-tighter">
-                    <span>Soul Growth</span>
+                    <span>{t.soulGrowth}</span>
                     <span>{item.diagnostic.scores.spiritualGrowth}/10</span>
                   </div>
                   <div className="w-full bg-[#f5f1ea] h-0.5 rounded-full overflow-hidden">

@@ -6,9 +6,10 @@ interface QuestionFlowProps {
   questions: QuestionWithOptions[];
   onComplete: (answers: QuestionAnswer[]) => void;
   onCancel?: () => void;
+  t: any;
 }
 
-const QuestionFlow: React.FC<QuestionFlowProps> = ({ questions, onComplete, onCancel }) => {
+const QuestionFlow: React.FC<QuestionFlowProps> = ({ questions, onComplete, onCancel, t }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [history, setHistory] = useState<QuestionAnswer[]>([]);
   
@@ -48,14 +49,14 @@ const QuestionFlow: React.FC<QuestionFlowProps> = ({ questions, onComplete, onCa
             <button 
               onClick={handleBack}
               className="p-1 hover:bg-[#f5f1ea] rounded-full transition-colors"
-              title="Previous Question"
+              title={t.backBtn}
             >
               <svg className="w-3 h-3 text-[#8b7e6a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <span className="text-[10px] font-bold text-[#8b7e6a] uppercase tracking-wider">
-              Inquiry • {currentIndex + 1} of {questions.length}
+              {t.inquiry} • {currentIndex + 1} {t.of} {questions.length}
             </span>
           </div>
           <span className="text-[10px] text-[#a8a29e] font-bold uppercase">{Math.round(progress)}%</span>

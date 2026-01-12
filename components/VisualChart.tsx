@@ -4,9 +4,10 @@ import { KarmaScores } from '../types';
 
 interface VisualChartProps {
   scores: KarmaScores;
+  labels: string[];
 }
 
-const VisualChart: React.FC<VisualChartProps> = ({ scores }) => {
+const VisualChart: React.FC<VisualChartProps> = ({ scores, labels }) => {
   const keys: (keyof KarmaScores)[] = [
     'intentionClarity',
     'actionIntegrity',
@@ -14,8 +15,6 @@ const VisualChart: React.FC<VisualChartProps> = ({ scores }) => {
     'lessonDepth',
     'spiritualGrowth'
   ];
-
-  const labels = ['Intent', 'Integrity', 'Impact', 'Wisdom', 'Growth'];
 
   const size = 200;
   const center = size / 2;
