@@ -42,40 +42,44 @@ const App: React.FC = () => {
     }
   }, [state.phase]);
 
-  // Google Identity Initialization
+  // Google Identity Initialization (Stable)
   useEffect(() => {
-    const google = (window as any).google;
-    if (google && google.accounts && google.accounts.id) {
-      google.accounts.id.initialize({
-        client_id: "SOUL_APP_CLIENT_ID", // Placeholder for actual Client ID
-        callback: async (response: any) => {
-          setState(prev => ({ ...prev, loading: true }));
-          try {
-            // Mocking a Google Token decoded payload for demonstration
-            // In a real app, you would decode the JWT `response.credential`
-            const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
-            const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
-            let user: UserProfile;
-            if (existing) {
-              user = existing;
-            } else {
-              user = { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
-              await storageService.saveUser(user, 'GOOGLE_AUTH');
+    const initGoogle = () => {
+      const google = (window as any).google;
+      if (google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+          client_id: "SOUL_APP_CLIENT_ID", // Placeholder
+          callback: async (response: any) => {
+            setState(prev => ({ ...prev, loading: true }));
+            try {
+              // Real apps would verify JWT here. We simulate for preview ease.
+              const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
+              const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
+              let user: UserProfile;
+              if (existing) {
+                user = existing;
+              } else {
+                user = { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
+                await storageService.saveUser(user, 'GOOGLE_AUTH');
+              }
+              setAuthType('GOOGLE');
+              setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
+            } catch (e) {
+              setState(prev => ({ ...prev, loading: false, error: "Authentication failed" }));
             }
-            setAuthType('GOOGLE');
-            setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
-          } catch (e) {
-            setState(prev => ({ ...prev, loading: false, error: "Google Login Failed" }));
-          }
-        },
-        auto_select: true
-      });
-      
-      // Optionally show One Tap if we are in the auth choice phase
-      if (state.phase === 'AUTH_CHOICE') {
-        google.accounts.id.prompt();
+          },
+          auto_select: true
+        });
+
+        if (state.phase === 'AUTH_CHOICE') {
+          google.accounts.id.prompt(); // Trigger One-Tap
+        }
       }
-    }
+    };
+
+    // Retry initialization in case script loads slowly
+    const timer = setTimeout(initGoogle, 1000);
+    return () => clearTimeout(timer);
   }, [state.phase, state.language]);
 
   const handleLanguageSelect = (lang: LanguageCode) => {
@@ -85,14 +89,13 @@ const App: React.FC = () => {
   const handleAuthChoice = async (method: AuthMethod) => {
     setAuthType(method);
     if (method === 'GOOGLE') {
-      // Trigger Google flow simulation or standard prompt
       const google = (window as any).google;
       if (google && google.accounts && google.accounts.id) {
         google.accounts.id.prompt();
       } else {
-        // Fallback simulation if GIS is blocked or not loaded
+        // Mock fallback for preview ease
         setState(prev => ({ ...prev, loading: true }));
-        const mockUser = { name: "Google Soul", email: "google@soul.com" }; 
+        const mockUser = { name: "Soul Traveler", email: "traveler@soul.com" }; 
         const existing = await storageService.loadUser(mockUser.email, 'GOOGLE_AUTH');
         let user = existing || { name: mockUser.name, email: mockUser.email, language: state.language, authMethod: 'GOOGLE', history: [] };
         if (!existing) await storageService.saveUser(user, 'GOOGLE_AUTH');
@@ -107,7 +110,7 @@ const App: React.FC = () => {
 
   const handleBiometricRegister = async (name: string, email: string) => {
     if (!name || !email) {
-      setState(prev => ({ ...prev, error: "Details required" }));
+      setState(prev => ({ ...prev, error: "Please provide all details" }));
       return;
     }
     setState(prev => ({ ...prev, loading: true }));
@@ -122,7 +125,7 @@ const App: React.FC = () => {
       }
       setState(prev => ({ ...prev, user, phase: 'DASHBOARD', loading: false }));
     } catch (err) {
-      setState(prev => ({ ...prev, loading: false, error: "Biometric fail" }));
+      setState(prev => ({ ...prev, loading: false, error: "Biometric setup failed" }));
     }
   };
 
@@ -146,7 +149,7 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, loading: true }));
     const exists = await storageService.userExists(loginData.email);
     if (exists) {
-      setState(prev => ({ ...prev, error: "Account exists", loading: false }));
+      setState(prev => ({ ...prev, error: "This email is already registered", loading: false }));
       return;
     }
     const newUser: UserProfile = {
@@ -164,7 +167,7 @@ const App: React.FC = () => {
         ...prev, loading: false, initialSituation: situation, currentQuestions: questions, phase: 'QUESTIONING', error: null
       }));
     } catch (err) {
-      setState(prev => ({ ...prev, loading: false, error: "Try again." }));
+      setState(prev => ({ ...prev, loading: false, error: "Failed to gather insights. Try again." }));
     }
   };
 
@@ -182,7 +185,7 @@ const App: React.FC = () => {
       
       setState(prev => ({ ...prev, loading: false, user: updatedUser, phase: 'RESULT', result: diagnostic, currentHistory: fullHistory }));
     } catch (err) {
-      setState(prev => ({ ...prev, loading: false, error: "Analysis failed." }));
+      setState(prev => ({ ...prev, loading: false, error: "Analysis failed. Please try again." }));
     }
   };
 
@@ -193,7 +196,7 @@ const App: React.FC = () => {
       const result = await generateFullSoulDiagnostic(state.user.history, state.language);
       setState(prev => ({ ...prev, loading: false, phase: 'FULL_RESULT', fullResult: result }));
     } catch (err) {
-      setState(prev => ({ ...prev, loading: false, error: "Failed to analyze transformation." }));
+      setState(prev => ({ ...prev, loading: false, error: "Transformation analysis failed." }));
     }
   };
 
@@ -298,7 +301,7 @@ const App: React.FC = () => {
                 setState(prev => ({ ...prev, loading: true }));
                 generateQuestionsWithOptions(state.initialSituation, state.currentHistory, mode, state.language)
                   .then(next => setState(prev => ({ ...prev, loading: false, phase: 'QUESTIONING', currentQuestions: next, result: null })))
-                  .catch(() => setState(prev => ({ ...prev, loading: false, error: "Fail" })));
+                  .catch(() => setState(prev => ({ ...prev, loading: false, error: "Failed to deepen exploration." })));
               }} 
               onRestart={() => setState(prev => ({ ...prev, phase: 'DASHBOARD' }))} 
               isRefining={state.loading} 
