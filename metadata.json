@@ -1,0 +1,7 @@
+{
+  "name": "Soul Development App",
+  "description": "A profound self-reflection application that uses Gemini to analyze life situations through the lens of cause and effect, mindfulness, and ethical clarity.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
